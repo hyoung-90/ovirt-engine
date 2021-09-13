@@ -6,6 +6,7 @@ import javax.inject.Inject;
 
 import org.ovirt.engine.core.bll.NonTransactiveCommandAttribute;
 import org.ovirt.engine.core.bll.context.CommandContext;
+import org.ovirt.engine.core.bll.storage.disk.managedblock.ManagedBlockStorageCommandUtil;
 import org.ovirt.engine.core.bll.validator.VmValidator;
 import org.ovirt.engine.core.common.AuditLogType;
 import org.ovirt.engine.core.common.action.AttachDetachVmDiskParameters;
@@ -41,6 +42,8 @@ public class DetachDiskFromVmCommand<T extends AttachDetachVmDiskParameters> ext
     private ImageDao imageDao;
     @Inject
     private VmStaticDao vmStaticDao;
+    @Inject
+    private ManagedBlockStorageCommandUtil managedBlockStorageCommandUtil;
 
     private Disk disk;
     private VmDevice vmDevice;
@@ -120,6 +123,11 @@ public class DetachDiskFromVmCommand<T extends AttachDetachVmDiskParameters> ext
         try {
             if (hotUnplug) {
                 performPlugCommand(VDSCommandType.HotUnPlugDisk, disk, vmDevice);
+                log.info("************* " + disk.getDiskStorageType());
+                if (DiskStorageType.MANAGED_BLOCK_STORAGE == disk.getDiskStorageType()) {
+                    managedBlockStorageCommandUtil.disconnectManagedBlockStorageDisk(getVm(),
+                            diskImageDao.get(disk.getId()), false);
+                }
             }
 
             TransactionSupport.executeInNewTransaction(() -> {
